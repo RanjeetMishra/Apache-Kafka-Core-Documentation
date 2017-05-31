@@ -224,6 +224,10 @@ object RequestChannel extends Logging {
   case object CloseConnectionAction extends ResponseAction
 }
 
+/**
+  * RequestChannel maintains blocking queue of requests to be processed by KafkaRequestHandler. For responses, it maintains
+  * #processors blocking queue of response which is handled by that processor in {@link Processor#processNewResponses()}
+ */
 class RequestChannel(val numProcessors: Int, val queueSize: Int) extends KafkaMetricsGroup {
   private var responseListeners: List[(Int) => Unit] = Nil
   private val requestQueue = new ArrayBlockingQueue[RequestChannel.Request](queueSize)

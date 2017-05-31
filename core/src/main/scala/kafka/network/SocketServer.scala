@@ -48,6 +48,23 @@ import scala.util.control.{ControlThrowable, NonFatal}
  *   1 Acceptor thread that handles new connections
  *   Acceptor has N Processor threads that each have their own selector and read requests from sockets
  *   M Handler threads that handle requests and produce responses back to the processor threads for writing.
+  *
+  *   A quick understanding about Java NIO is needed. One can go through <a href="http://tutorials.jenkov.com/java-nio/index.html">link</a>.
+  *   I will try to summarize Java NIO.
+  *   Three main terms you will find in Java NIO -- 1. Selector, 2. Channel and 3. Buffers
+  *   One can read/write to buffer via Channel. Channel can be a SocketChannel(read/write to socket), FileChannel, ServerSocketChannel(accept connections).
+  *   Now one can have a separate thread for every Channel to process requests in parallel manner.
+  *   Java NIO provides Selector. One can register channel to a selector and a thread can thus listen to multiple channels if any request
+  *   needs to be processed for one or more of cannels registered for the selector.
+  *
+  *   For Kafka Server Socket say we have to listen to one endpoint.
+  *   In that case there is one Acceptor thread with a ServerSocketChannel for the endpoint and it keeps listening for connection request.
+  *   For every connection made, it assigns it to one of the N processors in round robin fashion.
+  *
+  *   At this point, each processor is managing a list of connections which it registers to a selector and keeps recieving requests/sending responses
+  *   via RequestChannel which basically maintains blocking queue for requests and numprocessors size of blocking queue for responses.
+  *   Req/Response are processed by @see KafkaRequestHandler  which we will look into shortly.
+  *
  */
 class SocketServer(val config: KafkaConfig, val metrics: Metrics, val time: Time, val credentialProvider: CredentialProvider) extends Logging with KafkaMetricsGroup {
 
@@ -240,6 +257,7 @@ private[kafka] abstract class AbstractServerThread(connectionQuotas: ConnectionQ
 
 /**
  * Thread that accepts and configures new connections. There is one of these per endpoint.
+  * It assigns each connection to one of the processors which registers these pool of connections to a selector.
  */
 private[kafka] class Acceptor(val endPoint: EndPoint,
                               val sendBufferSize: Int,

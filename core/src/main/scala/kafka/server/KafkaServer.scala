@@ -219,9 +219,12 @@ class KafkaServer(val config: KafkaConfig, time: Time = Time.SYSTEM, threadNameP
         credentialProvider = new CredentialProvider(config.saslEnabledMechanisms)
 
         socketServer = new SocketServer(config, metrics, time, credentialProvider)
+
+        /* server start to accept connections, recv/send to these sockets*/
         socketServer.startup()
 
         /* start replica manager */
+        //TODO: Escaping it for now
         replicaManager = createReplicaManager(isShuttingDown)
         replicaManager.startup()
 
